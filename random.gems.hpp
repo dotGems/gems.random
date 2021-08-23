@@ -30,6 +30,7 @@ namespace random {
         if( time.time_since_epoch().count() == 0) time = current_time_point();
         if( *((uint128_t *) &trx_id) == 0 ) trx_id = get_trx_id();
         if( min_value >= max_value ) max_value = INT64_MAX;
+        check( !unique || (int128_t) max_value - min_value + 1 >= size, "gems.random::generate: can't generate unique numbers for range: " + std::to_string(min_value)+ ":"+ std::to_string(max_value) );
 
         vector<int64_t> res;
         salt += tapos_block_prefix() + tapos_block_num();   // initial salt
@@ -44,7 +45,7 @@ namespace random {
             const checksum256 sha = eosio::sha256( (const char*) &mix, sizeof( mix )); // generate hash for uniform distribution
             const uint64_t offset = ( salt + res.size() ) % 4;               // offset in sha
             const uint64_t rnd = *((uint64_t *) &sha + offset );             // take 8 random bytes
-            const int64_t val = min_value + (int64_t) (rnd % ( max_value - min_value + 1 ));  // normalize to min/max values
+            const int64_t val = min_value + (int64_t) (rnd % ( (int128_t) max_value - min_value + 1 ));  // normalize to min/max values
             if( !unique || std::find( res.begin(), res.end(), val ) == res.end() ) res.push_back( val );
         }
         return res;
