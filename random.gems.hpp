@@ -17,20 +17,21 @@ namespace random {
         return sha256( buf, read );
     }
 
-    vector<uint64_t> generate(
+    vector<int64_t> generate(
         uint8_t size,
         checksum256 trx_id,
         time_point time,
-        int64_t min_value,
-        int64_t max_value,
-        uint64_t salt )
+        int64_t min_value = 0,
+        int64_t max_value = 0,
+        uint64_t salt = 0,
+        bool unique = true )
     {
         if( size == 0 ) size = 1;
         if( time.time_since_epoch().count() == 0) time = current_time_point();
         if( *((uint128_t *) &trx_id) == 0 ) trx_id = get_trx_id();
         if( min_value >= max_value ) max_value = INT64_MAX;
 
-        vector<uint64_t> res;
+        vector<int64_t> res;
         salt += tapos_block_prefix() + tapos_block_num();   // initial salt
         while( res.size() < size ){
             uint128_t mix = salt++;
@@ -40,29 +41,29 @@ namespace random {
             mix += min_value * salt;
             mix += max_value * salt;
 
-            const auto sha = eosio::sha256( (const char*) &mix, sizeof( mix )); // generate hash for uniform distribution
-            const auto offset = ( salt + res.size() ) % 4;              // offset in sha
-            const uint64_t rnd = *((uint64_t *) &sha + offset );        // take 8 random bytes
-            const auto val = min_value + rnd % ( max_value - min_value + 1 );  // normalize to min/max values
-            if( std::find( res.begin(), res.end(), val ) == res.end() ) res.push_back( val );
+            const checksum256 sha = eosio::sha256( (const char*) &mix, sizeof( mix )); // generate hash for uniform distribution
+            const uint64_t offset = ( salt + res.size() ) % 4;               // offset in sha
+            const uint64_t rnd = *((uint64_t *) &sha + offset );             // take 8 random bytes
+            const int64_t val = min_value + (int64_t) (rnd % ( max_value - min_value + 1 ));  // normalize to min/max values
+            if( !unique || std::find( res.begin(), res.end(), val ) == res.end() ) res.push_back( val );
         }
         return res;
     }
 
 
-    vector<uint64_t> generate( uint8_t size = 1 ){
+    vector<int64_t> generate( uint8_t size = 1 ){
         return generate ( size, checksum256{}, time_point{}, 0, 0, 0 );
     }
 
-    vector<uint64_t> generate( uint8_t size, checksum256 trx_id ){
+    vector<int64_t> generate( uint8_t size, checksum256 trx_id ){
         return generate ( size, trx_id, time_point{}, 0, 0, 0 );
     }
 
-    vector<uint64_t> generate( uint8_t size, time_point time ){
+    vector<int64_t> generate( uint8_t size, time_point time ){
         return generate ( size, checksum256{}, time, 0, 0, 0 );
     }
 
-    vector<uint64_t> generate( uint8_t size, int64_t min_value, int64_t max_value ){
+    vector<int64_t> generate( uint8_t size, int64_t min_value, int64_t max_value ){
         return generate ( size, checksum256{}, time_point{}, min_value, max_value, 0 );
     }
 
